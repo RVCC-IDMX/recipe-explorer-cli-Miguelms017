@@ -33,5 +33,7 @@
     "source.fixAll": "always"
   },
   "liveServer.settings.port": 5500,
-  "liveServer.settings.root": "/docs"
+  "liveServer.settings.root": "/docs",
+  "editor.fontSize": 18,
+  "files.autoSave": "onFocusChange"
 }
