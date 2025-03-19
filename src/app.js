@@ -26,9 +26,9 @@ async function initialize() {
 
   // YOUR CODE HERE
   try {
-    const init = await Promise.all(favorites, cache);
+    await Promise.all([favorites.initializeFavorites(), cache.initializeCache()]);
 
-    await this.cache.clearexpired();
+    await cache.clearExpiredCache();
 
     return true;
   }
@@ -73,9 +73,8 @@ async function searchRecipes() {
       return response.json();
     })
 
-    console.log(ans);
 
-    if (!ans || ans.lenght === 0) {
+    if (!ans || ans.length === 0) {
       console.log('No recipes found');
     }
 
@@ -86,7 +85,7 @@ async function searchRecipes() {
     if (qna == 'yes' || qna == 'y') {
       const indx = readlineSync.question('What recipe do you want to see?') - 1;
 
-      if (indx >= 0 && indx < ans.lenght) {
+      if (indx >= 0 && indx < ans.length) {
         viewRecipeDetails(ans[indx].id);
       } else {
         console.log("Sorry, you must select one valid option");
@@ -163,7 +162,7 @@ async function viewRecipeDetails(recipeId) {
     fetch(api.getRelatedRecipes(ans))
       .then(response => response.json())
       .then(RelatedRecipes => {
-        if (RelatedRecipes.lenght > 0) {
+        if (RelatedRecipes.length > 0) {
           console.log("Related recipes");
           utils.formatRecipeList(RelatedRecipes);
         }
@@ -213,7 +212,7 @@ async function exploreByFirstLetter() {
 
     const qna = readlineSync.question('What recipe do you want to see? ') - 1;
 
-    if (qna >= 0 && qna < ans.lenght) {
+    if (qna >= 0 && qna < ans.length) {
       viewRecipeDetails(ans[qna].id);
     } else {
       console.log("Sorry, you must select one valid option");
@@ -264,7 +263,7 @@ async function searchByIngredient() {
 
     const qna = readlineSync.question('What recipe do you want to see? ') - 1;
 
-    if (qna >= 0 && qna < ans.lenght) {
+    if (qna >= 0 && qna < ans.length) {
       viewRecipeDetails(ans[qna].id);
     } else {
       console.log("Sorry, you must select one valid option");
@@ -343,12 +342,12 @@ async function discoverRandom() {
     if (favorites.isInFavorites == true) {
       const qna1 = readlineSync.question("This recipe is on favorites. Do you want to remove it? Y/N").toLowerCase();
       if (qna1 == 'y' || qna1 == 'yes') {
-        favorites.removeFavorite(recipeId);
+        favorites.removeFavorite(win.idMeal);
       }
     } else {
       const qna2 = readlineSync.question("This recipe is not on favorites. Do you want to add it? Y/N").toLowerCase();
       if (qna2 == 'y' || qna2 == 'yes') {
-        favorites.addFavorite(recipeId);
+        favorites.addFavorite(win.idMeal);
       }
     }
 
@@ -420,8 +419,9 @@ async function main() {
   // 6. Add error handling for any uncaught exceptions
 
   // YOUR CODE HERE
+
+
   try {
-    console.log(`Welcome To The Recipe Explorer\n Powered by TheMealDB`);
 
     const init = await initialize();
 
@@ -447,6 +447,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(1);
   });
 }
+
+console.log(`Welcome To The Recipe Explorer\n Powered by TheMealDB`);
+
+main();
 
 export default {
   main,

@@ -253,10 +253,11 @@ export async function getRandomMeal() {
 
     if (!response.ok) {
       return (`An error was found. Status: ${response.status}`)
-    } else {
-      const info = response.json()
-      return info.meals[0] || null;
     }
+
+    const info = response.json()
+    return info.meals[0] || null;
+
   } catch (error) {
     return ("can't be found", error);
   }
