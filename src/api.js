@@ -255,7 +255,7 @@ export async function getRandomMeal() {
       return (`An error was found. Status: ${response.status}`)
     }
 
-    const info = response.json()
+    const info = await response.json()
     return info.meals[0] || null;
 
   } catch (error) {

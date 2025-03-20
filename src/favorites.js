@@ -63,11 +63,12 @@ export async function getFavorites() {
   // YOUR CODE HERE
   try {
     await initializeFavorites();
-    const fav = fs.readFile(FAVORITES_FILE);
+    const fav = await fs.readFile(FAVORITES_FILE);
     const arr = JSON.parse(fav);
     return arr;
   } catch (error) {
     console.log('error loading favorites');
+    return [];
   }
 }
 
@@ -94,9 +95,10 @@ export async function addFavorite(recipe) {
   // YOUR CODE HERE
   try {
     await initializeFavorites();
-    const current = getFavorites();
+    const current = await getFavorites();
 
-    if (recipe.idMeal === current.meals.idMeal) {
+    if (current.some(fav => fav.idMeal === recipe.idMeal)) {
+      console.error('recipe already exist')
       return false;
     }
 
@@ -106,7 +108,7 @@ export async function addFavorite(recipe) {
 
     return true;
   } catch (error) {
-    console.error('error adding favorites', error);
+    console.error('Error adding favorite:', error.message);
     return false;
   }
 }
@@ -134,7 +136,24 @@ export async function removeFavorite(recipeId) {
   // YOUR CODE
   try {
     await initializeFavorites();
-    const current = getFavorites();
+    const current = await getFavorites();
+
+    const initLength = current.length;
+
+    const filtered = current.filter((object) => object.idMeal != recipeId);
+
+    if (filtered.length === initLength) {
+      console.error("Recipe not found");
+      return false;
+    }
+
+    await fs.writeFile(FAVORITES_FILE, JSON.stringify(filtered, null, 2))
+
+    return true;
+
+  } catch (error) {
+    console.error("something went wrong", error);
+    return false;
   }
 }
 
@@ -152,6 +171,24 @@ export async function isInFavorites(recipeId) {
   // 4. Handle any errors and return false on failure
 
   // YOUR CODE HERE
+  try {
+    const arr = await getFavorites();
+
+    const res = arr.some((object) => object.idMeal === recipeId);
+
+    if (res === false) {
+      console.error('recipe not found');
+      return false;
+    }
+
+    return true;
+
+  } catch (error) {
+    console.error('something went wrong', error);
+    return false;
+  }
+
+
 }
 
 /**
@@ -170,6 +207,21 @@ export async function getFavoriteById(recipeId) {
   // 4. Handle any errors and return null on failure
 
   // YOUR CODE HERE
+  try {
+    const fav = await getFavorites();
+
+    const found = fav.find((element) => element.idMeal === recipeId);
+
+    if (!found) {
+      console.error('recipe not found');
+      return null;
+    }
+
+    return found;
+  } catch (error) {
+    console.error("something went wrong", error);
+    return null;
+  }
 }
 
 export default {

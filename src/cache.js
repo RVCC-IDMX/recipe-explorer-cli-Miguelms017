@@ -41,7 +41,7 @@ export async function initializeCache() {
     try {
       await fs.mkdir(dir, { recursive: true });
 
-      await fs.writeFile(CACHE_FILE, JSON.stringify({}), 'utf8');
+      await fs.writeFile(CACHE_FILE, '{}');
 
       console.log('Cache file initialized.');
     } catch (writeError) {
@@ -79,16 +79,18 @@ export async function getFromCache(key) {
     const obj = JSON.parse(kche);
 
     if (!obj[key]) {
-      throw new Error("Doesn't exist the key on cache");
+      console.error("Doesn't exist the key on cache");
+      return null;
     }
 
-    const currentDate = (Date.now()) - CACHE_DURATION;
-    if (obj[key].timeStamp < currentDate) {
-      throw new Error("Expired cache key")
+    if (obj[key].timeStamp + CACHE_DURATION < Date.now()) {
+      console.error("Expired cache key");
+      return null;
     }
 
     const valCache = obj[key].data;
     return valCache;
+
   } catch (error) {
     console.error('Something went wrong while getting cache', error);
     return null;
@@ -120,7 +122,7 @@ export async function saveToCache(key, data) {
   try {
     await initializeCache();
 
-    const kche = fs.readFile(CACHE_FILE);
+    const kche = await fs.readFile(CACHE_FILE);
 
     const obj = JSON.parse(kche);
 
@@ -130,9 +132,12 @@ export async function saveToCache(key, data) {
     };
 
     await fs.writeFile(CACHE_FILE, JSON.stringify(obj, null, 2))
-    console.log("recipe added successfully")
+    console.log("recipe added successfully");
+    return true;
+
   } catch (error) {
     console.error('error adding to cache', error);
+    return false;
   }
 }
 
@@ -209,8 +214,8 @@ export async function getCachedOrFetch(key, fetchFn, forceRefresh = false) {
 
   // YOUR CODE HERE
   try {
-    if (forceRefresh) {
-      const dat = await getFromCache();
+    if (!forceRefresh) {
+      const dat = await getFromCache(key);
 
       if (dat != null) {
         return dat;
@@ -218,13 +223,31 @@ export async function getCachedOrFetch(key, fetchFn, forceRefresh = false) {
 
     }
 
-    if (!forceRefresh || dat === null) {
+    try {
       const fresh = await fetchFn();
       saveToCache(key, fresh);
       return fresh
+    } catch (fetchError) {
+      console.error("fetch failed.")
     }
+
+    try {
+      const cached = await fs.readFile(CACHE_FILE);
+      const cData = JSON.parse(cached);
+
+      if (cData[key]) {
+        console.warn("Expired key");
+        return cData[key].data;
+      }
+    } catch (cacheReadError) {
+      console.error("failed to read expired cache", cacheReadError);
+    }
+
+    return null;
+
   } catch (error) {
     console.error('error getting recipe')
+    return null;
   }
 }
 
