@@ -252,14 +252,17 @@ export async function getRandomMeal() {
     const response = await fetch(`${BASE_URL}/random.php`);
 
     if (!response.ok) {
-      return (`An error was found. Status: ${response.status}`)
+      console.error(`An error was found. Status: ${response.status}`)
+      return null;
     }
 
-    const info = await response.json()
+    const info = await response.json();
+
     return info.meals[0] || null;
 
   } catch (error) {
-    return ("can't be found", error);
+    console.error("can't be found", error);
+    return null;
   }
 }
 

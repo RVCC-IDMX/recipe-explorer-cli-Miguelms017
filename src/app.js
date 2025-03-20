@@ -69,7 +69,7 @@ async function searchRecipes() {
     const key = `search_${query.toLowerCase()}`;
 
     const ans = await cache.getCachedOrFetch(key, async () => {
-      const response = await fetch(api.searchMealsByName(query));
+      const response = api.searchMealsByName(query);
       return response.json();
     })
 
@@ -136,7 +136,7 @@ async function viewRecipeDetails(recipeId) {
     const key = `recipe_${recipeId}`;
 
     const ans = await cache.getCachedOrFetch(key, async () => {
-      const response = await fetch(api.getMealById(recipeId));
+      const response = api.getMealById(recipeId);
       return response.json()
     });
 
@@ -204,7 +204,7 @@ async function exploreByFirstLetter() {
     const key = `letters_${uniqueLetters.sort().join('')}`;
 
     const ans = await cache.getCachedOrFetch(key, async () => {
-      const response = await fetch(api.searchMealsByFirstLetter);
+      const response = api.searchMealsByFirstLetter;
       return response
     })
 
@@ -251,7 +251,7 @@ async function searchByIngredient() {
     const key = `ingredient_${ingredient.toLowerCase()}`
 
     const ans = await cache.getCachedOrFetch(key, async () => {
-      const response = await fetch(api.getMealsByIngredient)
+      const response = await api.getMealsByIngredient()
       if (typeof response == "string") {
         console.log(response);
       } else {
@@ -329,9 +329,9 @@ async function discoverRandom() {
     // 6. Handle any errors appropriately
 
     // YOUR CODE HERE
-    const prom1 = await fetch(api.getRandomMeal);
-    const prom2 = await fetch(api.getRandomMeal);
-    const prom3 = await fetch(api.getRandomMeal);
+    const prom1 = api.getRandomMeal;
+    const prom2 = api.getRandomMeal;
+    const prom3 = api.getRandomMeal;
 
     const win = Promise.race([prom1, prom2, prom3]);
 

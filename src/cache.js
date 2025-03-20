@@ -83,7 +83,7 @@ export async function getFromCache(key) {
       return null;
     }
 
-    if (obj[key].timeStamp + CACHE_DURATION < Date.now()) {
+    if (Date.now() - obj[key].timestamp > CACHE_DURATION) {
       console.error("Expired cache key");
       return null;
     }
