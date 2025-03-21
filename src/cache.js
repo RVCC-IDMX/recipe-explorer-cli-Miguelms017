@@ -88,7 +88,7 @@ export async function getFromCache(key) {
       return null;
     }
 
-    const valCache = obj[key].data;
+    const valCache = obj[key].recipe;
     return valCache;
 
   } catch (error) {
@@ -127,7 +127,7 @@ export async function saveToCache(key, data) {
     const obj = JSON.parse(kche);
 
     obj[key] = {
-      timeStamp: (Date.now()),
+      timestamp: (Date.now()),
       recipe: data
     };
 
@@ -173,7 +173,7 @@ export async function clearExpiredCache() {
     let i = 0;
 
     for (const key in obj) {
-      if (obj.hasownproperty(key) && obj[key].timeStamp < currentDate) {
+      if (obj.hasOwnProperty(key) && obj[key].timeStamp < currentDate) {
         delete obj[key];
         i += 1;
       }
@@ -225,7 +225,7 @@ export async function getCachedOrFetch(key, fetchFn, forceRefresh = false) {
 
     try {
       const fresh = await fetchFn();
-      saveToCache(key, fresh);
+      await saveToCache(key, fresh);
       return fresh
     } catch (fetchError) {
       console.error("fetch failed.")
@@ -237,7 +237,7 @@ export async function getCachedOrFetch(key, fetchFn, forceRefresh = false) {
 
       if (cData[key]) {
         console.warn("Expired key");
-        return cData[key].data;
+        return cData[key].recipe;
       }
     } catch (cacheReadError) {
       console.error("failed to read expired cache", cacheReadError);
