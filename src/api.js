@@ -34,7 +34,7 @@ export async function searchMealsByName(query) {
 
     const data = await response.json();
 
-    return data.meals || [];
+    return Array.isArray(data.meals) ? data.meals : [];
 
   } catch (error) {
 
@@ -173,7 +173,7 @@ export async function getMealsByIngredient(ingredient, timeoutMs = 5000) {
     const promise = fetch(`${BASE_URL}/filter.php?i=${encodeURIComponent(ingredient)}`)
       .then(async (result) => {
         if (!result.ok) {
-          console.log(`Recipe can't be found. Status: ${result.status}`)
+          console.error(`Recipe can't be found. Status: ${result.status}`)
           return [];
         } else {
           const info = await result.json();

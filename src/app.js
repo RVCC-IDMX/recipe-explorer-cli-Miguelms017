@@ -76,9 +76,10 @@ async function searchRecipes() {
 
     if (!ans || ans.length === 0) {
       console.log('No recipes found');
+      return null;
     }
 
-    utils.formatRecipeList(ans);
+    console.log(utils.formatRecipeList(ans));
 
     const qna = readlineSync.question('Do you want to see details? Y/N').toLowerCase();
 
@@ -136,18 +137,24 @@ async function viewRecipeDetails(recipeId) {
     const key = `recipe_${recipeId}`;
 
     const ans = await cache.getCachedOrFetch(key, async () => {
-      const response = api.getMealById(recipeId);
-      return response.json()
+      const response = await api.getMealById(recipeId);
+      const data = await response.json();
+      console.log("response: ", data);
+      return data;
     });
 
-    if (!ans || Object.keys(ans).length === 0) {
+    if (!ans || ans.meals.length === 0) {
       console.log("The recipe was not found");
-      return;
+      return null;
     }
 
-    utils.formatRecipe(ans);
+    const recipe = ans.meals[0];
 
-    if (favorites.isInFavorites == true) {
+    console.log(utils.formatRecipe(ans));
+
+    const isFavorite = await favorites.isInFavorites();
+
+    if (isFavorite) {
       const qna1 = readlineSync.question("This recipe is on favorites. Do you want to remove it? Y/N").toLowerCase();
       if (qna1 == 'y' || qna1 == 'yes') {
         favorites.removeFavorite(recipeId);
@@ -159,12 +166,12 @@ async function viewRecipeDetails(recipeId) {
       }
     }
 
-    fetch(api.getRelatedRecipes(ans))
+    fetch(api.getRelatedRecipes(recipe.strCategory))
       .then(response => response.json())
       .then(RelatedRecipes => {
         if (RelatedRecipes.length > 0) {
           console.log("Related recipes");
-          utils.formatRecipeList(RelatedRecipes);
+          console.log(utils.formatRecipeList(RelatedRecipes));
         }
       })
       .catch(error => console.error("Error detching related recipes:", error.message));
@@ -204,7 +211,7 @@ async function exploreByFirstLetter() {
     const key = `letters_${uniqueLetters.sort().join('')}`;
 
     const ans = await cache.getCachedOrFetch(key, async () => {
-      const response = api.searchMealsByFirstLetter;
+      const response = api.searchMealsByFirstLetter(key);
       return response
     })
 
@@ -251,22 +258,24 @@ async function searchByIngredient() {
     const key = `ingredient_${ingredient.toLowerCase()}`
 
     const ans = await cache.getCachedOrFetch(key, async () => {
-      const response = await api.getMealsByIngredient()
-      if (typeof response == "string") {
-        console.log(response);
-      } else {
-        return response.json()
-      }
-    })
+      return await api.getMealsByIngredient(ingredient)
+    });
 
-    utils.formatRecipeList(ans);
+    if (!Array.isArray(ans) || ans.length === 0) {
+      console.log("no recipes found");
+      return null;
+    }
+
+
+    console.log(utils.formatRecipeList(ans));
 
     const qna = readlineSync.question('What recipe do you want to see? ') - 1;
 
     if (qna >= 0 && qna < ans.length) {
-      viewRecipeDetails(ans[qna].id);
+      viewRecipeDetails(ans[qna].idMeal);
     } else {
-      console.log("Sorry, you must select one valid option");
+      console.error("Sorry, you must select one valid option");
+      return;
     }
 
     //_____________________________________________________________________________________________
@@ -329,25 +338,30 @@ async function discoverRandom() {
     // 6. Handle any errors appropriately
 
     // YOUR CODE HERE
-    const prom1 = api.getRandomMeal;
-    const prom2 = api.getRandomMeal;
-    const prom3 = api.getRandomMeal;
+    const prom1 = api.getRandomMeal();
+    const prom2 = api.getRandomMeal();
+    const prom3 = api.getRandomMeal();
 
-    const win = Promise.race([prom1, prom2, prom3]);
+    const win = await Promise.race([prom1, prom2, prom3]);
 
     if (win === null) {
-      console.error("recipe not found")
+      console.error("recipe not found");
+      return;
     }
 
-    if (favorites.isInFavorites == true) {
+    console.log(utils.formatRecipe(win))
+
+    const isFavorite = await favorites.isInFavorites(win.idMeal)
+
+    if (isFavorite) {
       const qna1 = readlineSync.question("This recipe is on favorites. Do you want to remove it? Y/N").toLowerCase();
       if (qna1 == 'y' || qna1 == 'yes') {
-        favorites.removeFavorite(win.idMeal);
+        await favorites.removeFavorite(win.idMeal);
       }
     } else {
       const qna2 = readlineSync.question("This recipe is not on favorites. Do you want to add it? Y/N").toLowerCase();
       if (qna2 == 'y' || qna2 == 'yes') {
-        favorites.addFavorite(win.idMeal);
+        await favorites.addFavorite(win);
       }
     }
 
