@@ -68,30 +68,30 @@ async function searchRecipes() {
     // YOUR CODE HERE
     const key = `search_${query.toLowerCase()}`;
 
-    const ans = await cache.getCachedOrFetch(key, async () => {
-      const response = api.searchMealsByName(query);
-      return response.json();
-    })
+    const ans = await cache.getCachedOrFetch(key, () =>
+      api.searchMealsByName(query)
+    );
 
 
     if (!ans || ans.length === 0) {
       console.log('No recipes found');
-      return null;
+      return;
     }
 
     console.log(utils.formatRecipeList(ans));
 
-    const qna = readlineSync.question('Do you want to see details? Y/N').toLowerCase();
+    const qna = readlineSync.keyInYN('Do you want to see details? Y/N ');
+    if (qna) {
+      const indx = readlineSync.questionInt(`Enter recipe number (1-${ans.length})`, {
 
-    if (qna == 'yes' || qna == 'y') {
-      const indx = readlineSync.question('What recipe do you want to see?') - 1;
+        limit: input => {
+          const num = parseInt(input);
+          return num >= 1 && num <= ans.length;
+        },
+        limitMessage: `please enter a number between 1 and ${ans.length}`
+      }) - 1;
 
-      if (indx >= 0 && indx < ans.length) {
-        viewRecipeDetails(ans[indx].id);
-      } else {
-        console.log("Sorry, you must select one valid option");
-      }
-
+      await viewRecipeDetails(ans[indx].idMeal);
     }
 
   } catch (error) {
@@ -136,42 +136,40 @@ async function viewRecipeDetails(recipeId) {
 
     const key = `recipe_${recipeId}`;
 
-    const ans = await cache.getCachedOrFetch(key, async () => {
-      const response = await api.getMealById(recipeId);
-      const data = await response.json();
-      console.log("response: ", data);
-      return data;
-    });
+    const ans = await cache.getCachedOrFetch(key, () =>
+      api.getMealById(recipeId)
+    );
 
-    if (!ans || ans.meals.length === 0) {
+    if (!ans || Object.keys(ans).length === 0) {
       console.log("The recipe was not found");
-      return null;
+      return;
     }
-
-    const recipe = ans.meals[0];
 
     console.log(utils.formatRecipe(ans));
 
-    const isFavorite = await favorites.isInFavorites();
+    const isFavorite = await favorites.isInFavorites(recipeId);
 
     if (isFavorite) {
-      const qna1 = readlineSync.question("This recipe is on favorites. Do you want to remove it? Y/N").toLowerCase();
-      if (qna1 == 'y' || qna1 == 'yes') {
-        favorites.removeFavorite(recipeId);
+      const qna1 = readlineSync.keyInYN("This recipe is on favorites. Do you want to remove it? ");
+      if (qna1) {
+        await favorites.removeFavorite(recipeId);
+        console.log('Recipe removed from favorites');
       }
     } else {
-      const qna2 = readlineSync.question("This recipe is not on favorites. Do you want to add it? Y/N").toLowerCase();
+      const qna2 = readlineSync.keyInYN("This recipe is not on favorites. Do you want to add it?");
       if (qna2 == 'y' || qna2 == 'yes') {
-        favorites.addFavorite(recipeId);
+        await favorites.addFavorite(recipeId);
+        console.log('Recipe added to favorites');
       }
     }
 
-    fetch(api.getRelatedRecipes(recipe.strCategory))
-      .then(response => response.json())
-      .then(RelatedRecipes => {
-        if (RelatedRecipes.length > 0) {
-          console.log("Related recipes");
-          console.log(utils.formatRecipeList(RelatedRecipes));
+    api.getRelatedRecipes(ans.strCategory)
+      .then(relatedRecipes => {
+        if (relatedRecipes && relatedRecipes.length > 0) {
+          console.log("\nRelated recipes");
+          console.log(utils.formatRecipeList(relatedRecipes));
+        } else {
+          console.log("No related recipes found");
         }
       })
       .catch(error => console.error("Error detching related recipes:", error.message));
@@ -210,19 +208,29 @@ async function exploreByFirstLetter() {
     // YOUR CODE HERE
     const key = `letters_${uniqueLetters.sort().join('')}`;
 
-    const ans = await cache.getCachedOrFetch(key, async () => {
-      const response = api.searchMealsByFirstLetter(key);
-      return response
-    })
+    const ans = await cache.getCachedOrFetch(key, async () =>
+      api.searchMealsByFirstLetter(uniqueLetters)
+    );
 
-    utils.formatRecipeList(ans);
+    if (!ans || ans.length === 0) {
+      console.log("No recipes found");
+      return;
+    }
 
-    const qna = readlineSync.question('What recipe do you want to see? ') - 1;
+    console.log(utils.formatRecipeList(ans));
 
-    if (qna >= 0 && qna < ans.length) {
-      viewRecipeDetails(ans[qna].id);
-    } else {
-      console.log("Sorry, you must select one valid option");
+    const qna = readlineSync.keyInYN('Would you like to view details for a recipe?');
+
+    if (qna) {
+      const index = readlineSync.questionInt(`Enter recipe number (1-${ans.length}): `, {
+        limit: input => {
+          const num = parseInt(input);
+          return num >= 1 && num <= ans.length;
+        },
+        limitMessage: `Please enter a number between 1 and ${ans.length}`
+      });
+
+      await viewRecipeDetails(ans[index - 1].idMeal);
     }
     //____________________________________________________________________________________________
   } catch (error) {
@@ -257,25 +265,35 @@ async function searchByIngredient() {
     // YOUR CODE HERE
     const key = `ingredient_${ingredient.toLowerCase()}`
 
-    const ans = await cache.getCachedOrFetch(key, async () => {
-      return await api.getMealsByIngredient(ingredient)
-    });
+    const ans = await cache.getCachedOrFetch(key, async () =>
+      api.getMealsByIngredient(ingredient, 5000)
+    );
 
-    if (!Array.isArray(ans) || ans.length === 0) {
-      console.log("no recipes found");
-      return null;
+    if (typeof ans === 'string') {
+      console.log(ans);
+      return;
+    }
+
+    if (!ans || ans.length === 0) {
+      console.log("No recipes found");
+      return;
     }
 
 
     console.log(utils.formatRecipeList(ans));
 
-    const qna = readlineSync.question('What recipe do you want to see? ') - 1;
+    const qna = readlineSync.keyInYN('Would you like to view details for a recipe?');
 
-    if (qna >= 0 && qna < ans.length) {
-      viewRecipeDetails(ans[qna].idMeal);
-    } else {
-      console.error("Sorry, you must select one valid option");
-      return;
+    if (qna) {
+      const index = readlineSync.questionInt(`Enter recipe number(1 - ${ans.length}): `, {
+        limit: input => {
+          const num = parseInt(input);
+          return num >= 1 && num <= ans.length;
+        },
+        limitMessage: `Please enter a number between 1 and ${ans.length}`
+      });
+
+      await viewRecipeDetails(ans[index - 1].idMeal);
     }
 
     //_____________________________________________________________________________________________
@@ -344,7 +362,7 @@ async function discoverRandom() {
 
     const win = await Promise.race([prom1, prom2, prom3]);
 
-    if (win === null) {
+    if (!win) {
       console.error("recipe not found");
       return;
     }
@@ -354,14 +372,16 @@ async function discoverRandom() {
     const isFavorite = await favorites.isInFavorites(win.idMeal)
 
     if (isFavorite) {
-      const qna1 = readlineSync.question("This recipe is on favorites. Do you want to remove it? Y/N").toLowerCase();
-      if (qna1 == 'y' || qna1 == 'yes') {
+      const qna1 = readlineSync.keyInYN("This recipe is on favorites. Do you want to remove it?");
+      if (qna1) {
         await favorites.removeFavorite(win.idMeal);
+        console.log('Recipe removed from favorites');
       }
     } else {
-      const qna2 = readlineSync.question("This recipe is not on favorites. Do you want to add it? Y/N").toLowerCase();
-      if (qna2 == 'y' || qna2 == 'yes') {
+      const qna2 = readlineSync.keyInYN("This recipe is not on favorites. Do you want to add it?");
+      if (qna2) {
         await favorites.addFavorite(win);
+        console.log('Recipe added to favorites');
       }
     }
 
@@ -444,7 +464,7 @@ async function main() {
       process.exit(1);
     }
 
-    console.log("Running...");
+    console.log(`Welcome To The Recipe Explorer\n Powered by TheMealDB`);
 
     await showMainMenu();
 
@@ -453,16 +473,6 @@ async function main() {
     process.exit(1);
   }
 }
-
-// Check if this file is being run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch(error => {
-    console.error('Fatal error:', error);
-    process.exit(1);
-  });
-}
-
-console.log(`Welcome To The Recipe Explorer\n Powered by TheMealDB`);
 
 main();
 
