@@ -78,7 +78,7 @@ export async function getFromCache(key) {
 
     const obj = JSON.parse(kche);
 
-    if (!obj[key]) {
+    /*if (!obj[key]) {
       console.error("Doesn't exist the key on cache");
       return null;
     }
@@ -88,8 +88,23 @@ export async function getFromCache(key) {
       return null;
     }
 
-    const valCache = obj[key].recipe;
-    return valCache;
+    const valCache = obj[key].idMeal;
+    return valCache;*/
+
+
+    if (obj[key]) {
+      const { timestamp, data } = obj[key];
+      const now = Date.now();
+
+      if (now - timestamp < CACHE_DURATION) {
+        console.log(`Cache hit for keys: ${key}`);
+        return data;
+      } else {
+        console.log(`cache expired for keys ${key}`)
+      }
+    }
+
+    return null;
 
   } catch (error) {
     console.error('Something went wrong while getting cache', error);
@@ -237,7 +252,7 @@ export async function getCachedOrFetch(key, fetchFn, forceRefresh = false) {
 
       if (cData[key]) {
         console.warn("Expired key");
-        return cData[key].recipe;
+        return cData[key].data;
       }
     } catch (cacheReadError) {
       console.error("failed to read expired cache", cacheReadError);
